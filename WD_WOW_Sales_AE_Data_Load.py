@@ -33,7 +33,7 @@ import sys
 current_date = datetime.now().strftime('%Y-%m-%d')
 ENV = Variable.get('ENV')
 source = 'WOW'
-job_name ='WD_'+ source + '_AE_RSD_Data_Load'
+job_name ='WD_'+ source + 'Sales_AE_Data_Load'
 Schedule = Variable.get(source + '_Schedule')
 #Schedule = None
 ops_bucket_nm = Variable.get('operations_bucket_name')
@@ -124,40 +124,15 @@ order by object_name asc
 WOW_Raw_List = get_redshift_query_records(extract_raw_object_query)
 _write_log("Raw Object List: {}".format(WOW_Raw_List))
 
-
-extract_dims_object_query = '''
-select object_name from {ds_metadata_table} where active_flag = 'true' and source_system='{source_system}' 
-and object_name like 'dim_%' and object_name not in ('dim_wow_expense_lines') order by object_name asc
-'''.format(ds_metadata_table=ds_metadata_table, source_system=source)
-WOW_PSA_Dims_List = get_redshift_query_records(extract_dims_object_query)
-_write_log("Dimension List: {}".format(WOW_PSA_Dims_List))
-
-extract_fact_object_query = '''
-select object_name from {ds_metadata_table} where active_flag = 'true' and source_system='{source_system}' 
-and object_name like 'fact_%' order by object_name asc
-'''.format(ds_metadata_table=ds_metadata_table, source_system=source)
-WOW_PSA_Fact_List = get_redshift_query_records(extract_fact_object_query)
-_write_log("Fact List: {}".format(WOW_PSA_Fact_List))
-
-
-extract_ref_object_query = '''
-select object_name from {ds_metadata_table} where active_flag = 'true' and source_system='{source_system}' 
-and object_name like 'ref_%' order by object_name asc
-'''.format(ds_metadata_table=ds_metadata_table, source_system=source)
-WOW_PSA_Refs_List = get_redshift_query_records(extract_ref_object_query)
-_write_log("Reference List: {}".format(WOW_PSA_Refs_List))
-
-
 extract_ent_object_query = '''
 select object_name from {ds_metadata_table} where active_flag = 'true' and source_system='{source_system}' 
 and object_name like 'ent_%' order by object_name asc
 '''.format(ds_metadata_table=ds_metadata_table, source_system=source)
-WOW_AE_RSD_Ents_List = get_redshift_query_records(extract_ent_object_query)
-_write_log("Entity List: {}".format(WOW_AE_RSD_Ents_List))
+WOW_Sales_AE_Ents_List = get_redshift_query_records(extract_ent_object_query)
+_write_log("Entity List: {}".format(WOW_Sales_AE_Ents_List))
 
 
 WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Worker_Details_for_AWS_ISU/'
-
 # list of dictionary of task details
 api_details = [
    
@@ -677,7 +652,7 @@ with DAG(dag_id=job_name,
          schedule_interval=Schedule,
          max_active_runs=1
          ) as dag:
-    # Start_Data_Processing = DummyOperator(task_id='Start_Data_Processing')
+    Start_Data_Processing = DummyOperator(task_id='Start_Data_Processing')
     # Start_Load_DIMS = DummyOperator(task_id='Start_Load_DIMS')
     # Start_Load_FACTS = DummyOperator(task_id='Start_Load_FACTS')
     # Start_Load_REFS = DummyOperator(task_id='Start_Load_REFS')
@@ -713,8 +688,8 @@ with DAG(dag_id=job_name,
         )
         return task
 
-    WOW_AE_RSD_Raw_Load_Type_Update_Start = PythonOperator(
-        task_id="WOW_AE_RSD_Raw_Load_Type_Update_Start",
+    WOW_Sales_AE_Raw_Load_Type_Update_Start = PythonOperator(
+        task_id="WOW_Sales_AE_Raw_Load_Type_Update_Start",
         python_callable=load_type_update,
         op_kwargs={"ip_load_stts": 'STARTS'},
         on_failure_callback=failure_email_notification,
@@ -736,15 +711,13 @@ with DAG(dag_id=job_name,
         on_failure_callback=failure_curated_email_notification
     ) for raw in WOW_Raw_List]
 
-    WOW_AE_RSD_Raw_Load_Type_Update_Completed = PythonOperator(
-        task_id="WOW_AE_RSD_Raw_Load_Type_Update_Completed",
+    WOW_Sales_AE_Raw_Load_Type_Update_Completed = PythonOperator(
+        task_id="WOW_Sales_AE_Raw_Load_Type_Update_Completed",
         python_callable=load_type_update,
         op_kwargs={"ip_load_stts": 'COMPLETED'},
         on_failure_callback=failure_email_notification,
         dag=dag
     )
-
-
 
     def DynamicEntLoad(ent):
         task = SSHOperator(
@@ -757,21 +730,6 @@ with DAG(dag_id=job_name,
                 log_dir=log_dir,
                 source=source,
                 ops_bucket_nm=ops_bucket_nm)
-        )
-        return task
-
-
-    def DynamicFactLoad(fact):
-        task = SSHOperator(
-            task_id="{fact}".format(fact=fact[0].strip()),
-            ssh_conn_id='{0}'.format(ssh_conn_id),
-            command='sh {ds_job_dir}/run_dim_fact.sh \
-            {ds_job_dir} {log_dir} {ops_bucket_nm} {source} fact {fact} > {log_dir}/fact_logs/{fact}.logs 2>&1'.format(
-                fact=fact[0].strip().split('fact_')[1],
-                ds_job_dir=ds_job_dir,
-                log_dir=log_dir,
-                source=source,
-                ops_bucket_nm=ops_bucket_name)
         )
         return task
 
@@ -807,40 +765,12 @@ with DAG(dag_id=job_name,
         UpdateRawCompletedPipeline = DynamicUpdateCompletedPipeline(api["task_name"])
         Start_Data_Processing >> UpdateRawInProcessPipeline
         UpdateRawInProcessPipeline >> WowRawLoad >> UpdateRawCompletedPipeline
-        UpdateRawCompletedPipeline >> WOW_AE_RSD_Raw_Load_Type_Update_Start >> Raw_2_Curated >> WOW_AE_RSD_Raw_Load_Type_Update_Completed 
-        
+        UpdateRawCompletedPipeline >> WOW_Sales_AE_Raw_Load_Type_Update_Start >> Raw_2_Curated >> WOW_Sales_AE_Raw_Load_Type_Update_Completed 
 
-    for ref in WOW_PSA_Refs_List:
-        RefLoad = DynamicRefLoad(ref)
-        Ref_check_status = DynamicCheckStatus('ref', ref[0].strip().split('ref_')[1])
-        FailedRefLoad = DynamicFailedTask('ref', ref[0].strip().split('ref_')[1])
-        CompletedRefLoad = DynamicCompletedTask('ref', ref[0].strip().split('ref_')[1])
-        WOW_PSA_Raw_Load_Type_Update_Completed >> Start_Load_REFS >> RefLoad >> Ref_check_status >> [FailedRefLoad, CompletedRefLoad]
-        CompletedRefLoad >> Start_Load_DIMS
-
-
-    for dim in WOW_PSA_Dims_List:
-        DimLoad = DynamicDimLoad(dim)
-        Dim_check_status = DynamicCheckStatus('dim', dim[0].strip().split('dim_')[1])
-        FailedDimLoad = DynamicFailedTask('dim', dim[0].strip().split('dim_')[1])
-        CompletedDimLoad = DynamicCompletedTask('dim', dim[0].strip().split('dim_')[1])
-        Start_Load_DIMS >> DimLoad >> Dim_check_status >> [FailedDimLoad, CompletedDimLoad]
-        CompletedDimLoad >> Start_Load_FACTS
-
-
-    for fact in WOW_PSA_Fact_List:
-        FactLoad = DynamicFactLoad(fact)
-        Fact_check_status = DynamicCheckStatus('fact', fact[0].strip().split('fact_')[1])
-        FailedFactLoad = DynamicFailedTask('fact', fact[0].strip().split('fact_')[1])
-        CompletedFactLoad = DynamicCompletedTask('fact', fact[0].strip().split('fact_')[1])
-        Start_Load_FACTS >> FactLoad >> Fact_check_status >> [FailedFactLoad, CompletedFactLoad]
-        CompletedFactLoad >> Data_Load_Completed
-
-
-    for ent in WOW_AE_RSD_Ents_List:
+    for ent in WOW_Sales_AE_Ents_List:
         EntLoad = DynamicEntLoad(ent)
         Ent_check_status = DynamicCheckStatus('ent', ent[0].strip().split('ent_')[1])
         FailedEntLoad = DynamicFailedTask('ent', ent[0].strip().split('ent_')[1])
         CompletedEntLoad = DynamicCompletedTask('ent', ent[0].strip().split('ent_')[1])
-        WOW_AE_RSD_Raw_Load_Type_Update_Completed >> Start_Load_ENTS >> EntLoad >> Ent_check_status >> [FailedEntLoad, CompletedEntLoad]
-        CompletedEntLoad 
+        WOW_Sales_AE_Raw_Load_Type_Update_Completed >> Start_Load_ENTS >> EntLoad >> Ent_check_status >> [FailedEntLoad, CompletedEntLoad]
+        CompletedEntLoad >> Data_Load_Completed
