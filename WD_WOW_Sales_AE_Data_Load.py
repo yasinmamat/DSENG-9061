@@ -133,49 +133,15 @@ _write_log("Entity List: {}".format(WOW_Sales_AE_Ents_List))
 
 
 WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Worker_Details_for_AWS_ISU/'
+#WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Sales_AE_Prism_ISU/Sales_AE_RSD_Competency_Form__Full_Extract_?Career___Progress_Check-In_Templates!WID=941a824270db019285b6cfd35615a6e9!7ad208cd53530179d1063137671e66fc!3018556062f001d519184c36190e9baf!94b93a3bb8810158984f19a9591545dc&Organizations!WID=84a5a2213bc01056864b52938b7e0cd9&Include_Subordinate_Organizations=1&format=json
+'
 # list of dictionary of task details
 api_details = [
-   
     {
-        "task_name": "Currency",
+        "task_name": "ae_rsd",
         "task_details": {
             "api": WOW_api_url + "Historic_Currency_Rates_API?Target_Currency!Currency_ID=USD&format=csv",
-            "config": {"output_file": "Currency.csv"}
-        }
-    },
-    {
-        "task_name": "Payment_details",
-        "task_details": {
-            "api": WOW_api_url + "Average_Days_Past_Due?Company!WID=4168889cf51201f8e51ced071e174261",
-            "config": {"output_file": "Payment_details.csv"}
-        }
-    },
-    {
-        "task_name": "Forecast_details",
-        "task_details": {
-            "api": WOW_api_url + "tcp_Forecasted_Hours__PDX_?",
-            "config": {"output_file": "Forecast_details.csv"}
-        }
-    },
-    {
-        "task_name": "Worker_details",
-        "task_details": {
-            "api": WOW_api_url + "tcp_Worker_Detail__PDX_?&format=csv",
-            "config": {"output_file": "Worker_details.csv"}
-        }
-    },
-    {
-        "task_name": "Project_details",
-        "task_details": {
-            "api": WOW_api_url + "tcp_Project_Details__PDX_?&format=csv",
-            "config": {"output_file": "Project_details.csv"}
-        }
-    },
-    {
-        "task_name": "Timesheet_details",
-        "task_details": {
-            "api": WOW_api_url + "tcp_Timesheet_Detail_Report_-_All_Project_Time__AWS_?",
-            "config": {"output_file": "Timesheet_details.csv"}
+            "config": {"output_file": "ae_rsd.csv"}
         }
     }
 ]
