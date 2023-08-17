@@ -32,7 +32,7 @@ import sys
 current_date = datetime.now().strftime('%Y-%m-%d')
 ENV = Variable.get('ENV')
 source = 'WOW'
-job_name ='WD_'+ source + 'Sales_AE_RSD_Data_Load'
+job_name ='WD_'+ source + '_Sales_AE_RSD_Data_Load'
 Schedule = Variable.get(source + '_Schedule')
 #Schedule = None
 ops_bucket_nm = Variable.get('operations_bucket_name')
@@ -45,8 +45,8 @@ log_dir = '/home/hadoop/ds_logs'
 log_date = 'log_' + current_date
 sn_pwd = Variable.get('snow_secret_key')
 sn_api_url = Variable.get('snow_api_url')
-wow_username = Variable.get('wow_username')
-wow_password = Variable.get('wow_password')
+wow_ae_rsd_username = Variable.get('wow_ae_rsd_username')
+wow_password_ae_rsd = Variable.get('wow_password_ae_rsd')
 redshift_conn_id = 'redshift_ccr'
 region_name = 'us-west-2'
 pipeline_schema = 'ctrl'
@@ -132,6 +132,7 @@ _write_log("Entity List: {}".format(WOW_Sales_AE_Ents_List))
 
 
 WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Sales_AE_Prism_ISU/'
+
 
 # list of dictionary of task details
 api_details = [
@@ -595,7 +596,7 @@ def process_row(bucket_nm, task_details, **kwargs):
                       aws_secret_access_key=raw_secret_key)
 
     # Pulls the data from API by a GET requests
-    response = requests.get(api_endpoint, auth=HTTPBasicAuth(wow_username, wow_password))
+    response = requests.get(api_endpoint, auth=HTTPBasicAuth(wow_ae_rsd_username, wow_password_ae_rsd))
     data = response.text
     if response.status_code!=200:
         print("response status code: "+str(response.status_code))
