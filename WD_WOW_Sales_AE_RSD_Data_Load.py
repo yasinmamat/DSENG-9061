@@ -1,7 +1,6 @@
 # developer-- Yasin Mamat
 # Email Id- yasin.mamat@workday.com
 
-
 from datetime import timedelta
 from airflow.models import DAG
 from airflow.operators.bash_operator import BashOperator
@@ -33,7 +32,7 @@ import sys
 current_date = datetime.now().strftime('%Y-%m-%d')
 ENV = Variable.get('ENV')
 source = 'WOW'
-job_name ='WD_'+ source + 'Sales_AE_Data_Load'
+job_name ='WD_'+ source + 'Sales_AE_RSD_Data_Load'
 Schedule = Variable.get(source + '_Schedule')
 #Schedule = None
 ops_bucket_nm = Variable.get('operations_bucket_name')
@@ -132,15 +131,14 @@ WOW_Sales_AE_Ents_List = get_redshift_query_records(extract_ent_object_query)
 _write_log("Entity List: {}".format(WOW_Sales_AE_Ents_List))
 
 
-WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Worker_Details_for_AWS_ISU/'
-#WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Sales_AE_Prism_ISU/Sales_AE_RSD_Competency_Form__Full_Extract_?Career___Progress_Check-In_Templates!WID=941a824270db019285b6cfd35615a6e9!7ad208cd53530179d1063137671e66fc!3018556062f001d519184c36190e9baf!94b93a3bb8810158984f19a9591545dc&Organizations!WID=84a5a2213bc01056864b52938b7e0cd9&Include_Subordinate_Organizations=1&format=json
-'
+WOW_api_url = 'https://wd5-services1.myworkday.com/ccx/service/customreport2/workday/Sales_AE_Prism_ISU/'
+
 # list of dictionary of task details
 api_details = [
     {
         "task_name": "ae_rsd",
         "task_details": {
-            "api": WOW_api_url + "Historic_Currency_Rates_API?Target_Currency!Currency_ID=USD&format=csv",
+            "api": WOW_api_url + "Sales_AE_RSD_Competency_Form__Full_Extract_?Career___Progress_Check-In_Templates!WID=941a824270db019285b6cfd35615a6e9!7ad208cd53530179d1063137671e66fc!3018556062f001d519184c36190e9baf!94b93a3bb8810158984f19a9591545dc&Organizations!WID=84a5a2213bc01056864b52938b7e0cd9&Include_Subordinate_Organizations=1&format=csv",
             "config": {"output_file": "ae_rsd.csv"}
         }
     }
