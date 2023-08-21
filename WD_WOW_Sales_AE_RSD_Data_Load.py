@@ -117,9 +117,9 @@ def get_redshift_query_records(sql_query):
         sys.exit(1)
 
 extract_raw_object_query = '''
-select object_name from {ds_src_obj_list_table} where active_flag = 'true' and source_system='{source_system}' 
+select object_name from {ds_src_obj_list_table} where active_flag = 'true' and object_name in '('ae_rsd')'  
 order by object_name asc
-'''.format(ds_src_obj_list_table=ds_src_obj_list_table, source_system=source)
+'''.format(ds_src_obj_list_table=ds_src_obj_list_table)
 WOW_Raw_List = get_redshift_query_records(extract_raw_object_query)
 _write_log("Raw Object List: {}".format(WOW_Raw_List))
 
